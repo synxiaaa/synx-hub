@@ -384,8 +384,8 @@ local function createExecButton(name, url, order)
 end
 
 createExecButton("JB speed",    "https://raw.githubusercontent.com/synxiaaa/synx-hub/refs/heads/main/synx%20jb%20cheats1", 1)
-createExecButton("AutoRob",     "https://scripts.projectauto.xyz/AutoRobV6", 2)
-createExecButton("AutoArrest",  "https://scripts.projectauto.xyz/AutoRobV6", 3)
+createExecButton("AutoRob",     "https://scripts.projectauto.xyz/V7", 2)
+createExecButton("AutoArrest",  "https://scripts.projectauto.xyz/AutoArrestV4", 3)
 
 -- ── Dragging ────────────────────────────────────────────────────────
 local dragging, dragInput, dragStart, startPos
