@@ -11,7 +11,7 @@ local invisEnabled = false
 local flySpeed = 50
 local walkSpeed = 50
 
--- ==================== GUI ====================
+-- GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AdvancedHub"
 screenGui.ResetOnSpawn = false
@@ -29,7 +29,7 @@ frame.Parent = screenGui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-title.Text = "Thomas UNI V5"
+title.Text = "Thomas UNI V6?"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
@@ -175,7 +175,7 @@ local function toggleInvisibility(state)
     end
 end
 
--- ==================== OTHER FUNCTIONS ====================
+-- ==================== Noclip & WalkSpeed ====================
 local function toggleNoclip(state)
     noclipping = state
     if state then
@@ -214,8 +214,9 @@ local function toggleWalkSpeed(state)
     end
 end
 
+-- ==================== ESP SYSTEM ====================
 local function createESP(char)
-    if espData[char] or not char then return end
+    if espData[char] or not char or not char:FindFirstChild("Head") then return end
     local highlight = Instance.new("Highlight")
     highlight.FillColor = Color3.fromRGB(255, 0, 255)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -224,7 +225,7 @@ local function createESP(char)
     highlight.Parent = char
 
     local bill = Instance.new("BillboardGui")
-    bill.Adornee = char:WaitForChild("Head")
+    bill.Adornee = char.Head
     bill.Size = UDim2.new(4,0,3,0)
     bill.StudsOffset = Vector3.new(0,3,0)
     bill.AlwaysOnTop = true
@@ -307,7 +308,7 @@ local function toggleHealth(state)
     end
 end
 
--- ==================== AIMBOT WITH FIXED TEAM CHECK ====================
+-- ==================== AIMBOT WITH TEAM CHECK ====================
 local function isVisible(targetHead)
     local camera = workspace.CurrentCamera
     local myHead = player.Character and player.Character:FindFirstChild("Head")
@@ -326,9 +327,9 @@ local function getBestTarget()
 
     for _, p in pairs(game.Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
-            -- FIXED TEAM CHECK
+            -- Team Check
             if p.Team == player.Team and player.Team ~= nil then
-                continue -- Skip teammates
+                continue
             end
 
             local head = p.Character.Head
@@ -348,7 +349,7 @@ local function getBestTarget()
     return bestTarget
 end
 
--- ==================== RESPAWN ESP (0.1s) ====================
+-- ==================== RESPAWN ESP ====================
 local function onCharacterAdded(char)
     task.wait(0.1)
     if espEnabled and char:FindFirstChild("Head") then
@@ -447,6 +448,5 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
-print("✅ FULL SCRIPT LOADED")
-print("• Team Check fixed on Aimbot")
+print("✅ FULL SCRIPT LOADED - ESP Fixed")
 print("• E = Toggle ESP | F = Fly | X = Invis | N = Noclip | Q = Aimbot")
