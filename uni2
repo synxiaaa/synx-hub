@@ -6,6 +6,7 @@ local walkSpeedEnabled = false
 local espEnabled = false
 local healthBarEnabled = false
 local aimbotEnabled = false
+local invisEnabled = false
 
 local flySpeed = 50
 local walkSpeed = 50
@@ -17,7 +18,7 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 230, 0, 480)
+frame.Size = UDim2.new(0, 230, 0, 520)
 frame.Position = UDim2.new(1, -240, 0, 10)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
@@ -27,11 +28,11 @@ frame.Parent = screenGui
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundColor3 = Color3.fromRGB(20, 30, 20)
-title.Text = "Thomas UNI 4 big dick"
+title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+title.Text = "Thomas UNI V2"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
+title.TextSize = 19
 title.Parent = frame
 
 -- Fly Section
@@ -54,15 +55,367 @@ local espToggle = Instance.new("TextButton") espToggle.Size = UDim2.new(0.9,0,0,
 
 local healthToggle = Instance.new("TextButton") healthToggle.Size = UDim2.new(0.9,0,0,40) healthToggle.Position = UDim2.new(0.05,0,0,380) healthToggle.BackgroundColor3 = Color3.fromRGB(0,200,0) healthToggle.Text = "Enable Health Bars" healthToggle.TextColor3 = Color3.fromRGB(255,255,255) healthToggle.Font = Enum.Font.SourceSansBold healthToggle.TextSize = 17 healthToggle.Parent = frame
 
+-- Invisibility
+local invisToggle = Instance.new("TextButton") invisToggle.Size = UDim2.new(0.9,0,0,40) invisToggle.Position = UDim2.new(0.05,0,0,425) invisToggle.BackgroundColor3 = Color3.fromRGB(0,200,0) invisToggle.Text = "Enable Invisibility (X)" invisToggle.TextColor3 = Color3.fromRGB(255,255,255) invisToggle.Font = Enum.Font.SourceSansBold invisToggle.TextSize = 17 invisToggle.Parent = frame
+
 -- Aimbot
-local aimbotToggle = Instance.new("TextButton") aimbotToggle.Size = UDim2.new(0.9,0,0,40) aimbotToggle.Position = UDim2.new(0.05,0,0,425) aimbotToggle.BackgroundColor3 = Color3.fromRGB(0,200,0) aimbotToggle.Text = "Enable Aimbot (Q)" aimbotToggle.TextColor3 = Color3.fromRGB(255,255,255) aimbotToggle.Font = Enum.Font.SourceSansBold aimbotToggle.TextSize = 17 aimbotToggle.Parent = frame
+local aimbotToggle = Instance.new("TextButton") aimbotToggle.Size = UDim2.new(0.9,0,0,40) aimbotToggle.Position = UDim2.new(0.05,0,0,470) aimbotToggle.BackgroundColor3 = Color3.fromRGB(0,200,0) aimbotToggle.Text = "Enable Aimbot (Q)" aimbotToggle.TextColor3 = Color3.fromRGB(255,255,255) aimbotToggle.Font = Enum.Font.SourceSansBold aimbotToggle.TextSize = 17 aimbotToggle.Parent = frame
 
 local espData = {}
 local noclipLoop, walkLoop = nil, nil
 local bv, bg = nil, nil
+local invisSeat = nil
 
--- ==================== GET VEHICLE ROOT ====================
+-- ==================== VEHICLE FLY ====================
 local function getVehicleRoot()
+    local char = player.Character
+    if not char then return nil end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hum or not hum.SeatPart then return nil end
+    local seat = hum.SeatPart
+    local model = seat.Parent
+    if model.PrimaryPart and not model.PrimaryPart.Anchored then return model.PrimaryPart end
+    local bestPart, maxVolume = nil, 0
+    for _, part in pairs(model:GetDescendants()) do
+        if part:IsA("BasePart") and not part.Anchored then
+            local volume = part.Size.X * part.Size.Y * part.Size.Z
+            if volume > maxVolume then maxVolume = volume bestPart = part end
+        end
+    end
+    return bestPart or seat
+end
+
+local function startFlying()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local root = char:WaitForChild("HumanoidRootPart")
+    
+    flying = true
+    hum.PlatformStand = true
+    
+    local targetPart = getVehicleRoot() or root
+    
+    bv = Instance.new("BodyVelocity") bv.MaxForce = Vector3.new(1e5,1e5,1e5) bv.Parent = targetPart
+    bg = Instance.new("BodyGyro") bg.MaxTorque = Vector3.new(1e5,1e5,1e5) bg.P = 12500 bg.Parent = targetPart
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if not flying then return end
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.new()
+        local uis = game:GetService("UserInputService")
+        if uis:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+        if uis:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+        if uis:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+        if uis:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+        if uis:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
+        if uis:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
+        
+        bv.Velocity = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.new(0,0,0)
+        bg.CFrame = cam.CFrame
+    end)
+end
+
+local function stopFlying()
+    flying = false
+    if bv then bv:Destroy() bv = nil end
+    if bg then bg:Destroy() bg = nil end
+    local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = false end
+end
+
+-- ==================== FE INVISIBILITY ====================
+local function toggleInvisibility(state)
+    invisEnabled = state
+    local char = player.Character
+    if not char then return end
+    
+    if state then
+        invisToggle.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        invisToggle.Text = "Disable Invisibility (X)"
+        
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if root then
+            local savedCFrame = root.CFrame
+            root.CFrame = CFrame.new(-25.95, 400, 3537.55)
+            task.wait(0.2)
+            
+            invisSeat = Instance.new("Seat")
+            invisSeat.Name = "InvisSeat"
+            invisSeat.Anchored = false
+            invisSeat.CanCollide = false
+            invisSeat.Transparency = 1
+            invisSeat.Size = Vector3.new(4, 1, 4)
+            invisSeat.Position = root.Position
+            invisSeat.Parent = workspace
+            
+            local weld = Instance.new("WeldConstraint")
+            weld.Part0 = invisSeat
+            weld.Part1 = root
+            weld.Parent = invisSeat
+            
+            task.wait(0.1)
+            invisSeat.CFrame = savedCFrame
+        end
+    else
+        invisToggle.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        invisToggle.Text = "Enable Invisibility (X)"
+        
+        if invisSeat then
+            invisSeat:Destroy()
+            invisSeat = nil
+        end
+    end
+end
+
+-- ==================== Noclip & WalkSpeed ====================
+local function toggleNoclip(state)
+    noclipping = state
+    if state then
+        noclipLoop = game:GetService("RunService").Stepped:Connect(function()
+            local char = player.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end)
+        noclipToggle.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        noclipToggle.Text = "Disable Noclip"
+    else
+        if noclipLoop then noclipLoop:Disconnect() end
+        noclipToggle.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        noclipToggle.Text = "Enable Noclip (N)"
+    end
+end
+
+local function toggleWalkSpeed(state)
+    walkSpeedEnabled = state
+    if state then
+        walkLoop = game:GetService("RunService").Heartbeat:Connect(function()
+            local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+            if hum then hum.WalkSpeed = walkSpeed end
+        end)
+        wsToggle.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        wsToggle.Text = "Disable WalkSpeed"
+    else
+        if walkLoop then walkLoop:Disconnect() end
+        local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+        if hum then hum.WalkSpeed = 16 end
+        wsToggle.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        wsToggle.Text = "Enable WalkSpeed"
+    end
+end
+
+-- ==================== ESP WITH RESPAWN SUPPORT ====================
+local function createESP(char)
+    if espData[char] or not char then return end
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = Color3.fromRGB(255, 0, 255)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.7
+    highlight.Adornee = char
+    highlight.Parent = char
+
+    local bill = Instance.new("BillboardGui")
+    bill.Adornee = char:WaitForChild("Head")
+    bill.Size = UDim2.new(4,0,3,0)
+    bill.StudsOffset = Vector3.new(0,3,0)
+    bill.AlwaysOnTop = true
+    bill.Parent = char
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1,0,0.5,0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = char.Name
+    nameLabel.TextColor3 = Color3.new(1,1,1)
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.TextSize = 16
+    nameLabel.Parent = bill
+
+    local healthBG = Instance.new("Frame")
+    healthBG.Size = UDim2.new(1,0,0.25,0)
+    healthBG.Position = UDim2.new(0,0,0.55,0)
+    healthBG.BackgroundColor3 = Color3.new(0,0,0)
+    healthBG.Visible = healthBarEnabled
+    healthBG.Parent = bill
+
+    local healthBar = Instance.new("Frame")
+    healthBar.Size = UDim2.new(1,0,1,0)
+    healthBar.BackgroundColor3 = Color3.new(0,1,0)
+    healthBar.Parent = healthBG
+
+    espData[char] = {highlight, bill, healthBG, healthBar}
+end
+
+local function removeESP(char)
+    if espData[char] then
+        for _, v in pairs(espData[char]) do if v then v:Destroy() end end
+        espData[char] = nil
+    end
+end
+
+local function updateHealthBars()
+    for char, data in pairs(espData) do
+        if data[4] and char:FindFirstChild("Humanoid") then
+            local hum = char.Humanoid
+            data[4].Size = UDim2.new(math.clamp(hum.Health/hum.MaxHealth,0,1), 0, 1, 0)
+        end
+    end
+end
+
+local function toggleESP(state)
+    espEnabled = state
+    if state then
+        espToggle.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        espToggle.Text = "Disable ESP (E)"
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p ~= player and p.Character then
+                createESP(p.Character)
+            end
+        end
+    else
+        espToggle.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        espToggle.Text = "Enable ESP (E)"
+        for char, _ in pairs(espData) do removeESP(char) end
+        espData = {}
+    end
+end
+
+local function toggleHealth(state)
+    healthBarEnabled = state
+    if state then
+        healthToggle.BackgroundColor3 = Color3.fromRGB(200,0,0)
+        healthToggle.Text = "Disable Health Bars"
+    else
+        healthToggle.BackgroundColor3 = Color3.fromRGB(0,200,0)
+        healthToggle.Text = "Enable Health Bars"
+    end
+    for _, data in pairs(espData) do
+        if data[3] then data[3].Visible = healthBarEnabled end
+    end
+end
+
+-- ==================== AIMBOT WITH TEAM CHECK ====================
+local function isVisible(targetHead)
+    local camera = workspace.CurrentCamera
+    local myHead = player.Character and player.Character:FindFirstChild("Head")
+    if not myHead then return false end
+    local ray = Ray.new(camera.CFrame.Position, (targetHead.Position - camera.CFrame.Position).Unit * 500)
+    local hit = workspace:FindPartOnRayWithIgnoreList(ray, {player.Character})
+    return hit == nil or hit:IsDescendantOf(targetHead.Parent)
+end
+
+local function getBestTarget()
+    local camera = workspace.CurrentCamera
+    local bestTarget = nil
+    local bestScore = math.huge
+
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
+            if p.Team == player.Team and player.Team ~= nil then continue end -- Team Check
+
+            local head = p.Character.Head
+            if isVisible(head) then
+                local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local center = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                    if dist < bestScore then
+                        bestScore = dist
+                        bestTarget = head
+                    end
+                end
+            end
+        end
+    end
+    return bestTarget
+end
+
+-- ==================== CONNECTIONS ====================
+updateFlyBtn.MouseButton1Click:Connect(function()
+    local n = tonumber(flyBox.Text)
+    if n and n > 0 then flySpeed = n end
+end)
+
+updateWSBtn.MouseButton1Click:Connect(function()
+    local n = tonumber(wsBox.Text)
+    if n and n > 0 then walkSpeed = n end
+end)
+
+flyToggle.MouseButton1Click:Connect(function()
+    if flying then stopFlying() else startFlying() end
+    flyToggle.BackgroundColor3 = flying and Color3.fromRGB(200,0,0) or Color3.fromRGB(0,200,0)
+    flyToggle.Text = flying and "Disable Fly" or "Enable Fly (F)"
+end)
+
+noclipToggle.MouseButton1Click:Connect(function() toggleNoclip(not noclipping) end)
+wsToggle.MouseButton1Click:Connect(function() toggleWalkSpeed(not walkSpeedEnabled) end)
+espToggle.MouseButton1Click:Connect(function() toggleESP(not espEnabled) end)
+healthToggle.MouseButton1Click:Connect(function() toggleHealth(not healthBarEnabled) end)
+invisToggle.MouseButton1Click:Connect(function() toggleInvisibility(not invisEnabled) end)
+
+aimbotToggle.MouseButton1Click:Connect(function()
+    aimbotEnabled = not aimbotEnabled
+    aimbotToggle.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(200,0,0) or Color3.fromRGB(0,200,0)
+    aimbotToggle.Text = aimbotEnabled and "Disable Aimbot" or "Enable Aimbot (Q)"
+end)
+
+-- Keyboard Controls
+game:GetService("UserInputService").InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.F then
+        if flying then stopFlying() else startFlying() end
+        flyToggle.BackgroundColor3 = flying and Color3.fromRGB(200,0,0) or Color3.fromRGB(0,200,0)
+        flyToggle.Text = flying and "Disable Fly" or "Enable Fly (F)"
+    elseif input.KeyCode == Enum.KeyCode.E then
+        toggleESP(not espEnabled)
+    elseif input.KeyCode == Enum.KeyCode.X then
+        toggleInvisibility(not invisEnabled)
+    elseif input.KeyCode == Enum.KeyCode.N then
+        toggleNoclip(not noclipping)
+    elseif input.KeyCode == Enum.KeyCode.Q then
+        aimbotEnabled = not aimbotEnabled
+        aimbotToggle.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(200,0,0) or Color3.fromRGB(0,200,0)
+        aimbotToggle.Text = aimbotEnabled and "Disable Aimbot" or "Enable Aimbot (Q)"
+    end
+end)
+
+-- ==================== RESPAWN SUPPORT ====================
+player.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    if espEnabled then
+        createESP(char)
+    end
+end)
+
+for _, plr in pairs(game.Players:GetPlayers()) do
+    if plr ~= player then
+        plr.CharacterAdded:Connect(function(char)
+            task.wait(1)
+            if espEnabled then createESP(char) end
+        end)
+    end
+end
+
+-- Main Loop
+game:GetService("RunService").RenderStepped:Connect(function()
+    if healthBarEnabled then updateHealthBars() end
+    if aimbotEnabled then
+        local uis = game:GetService("UserInputService")
+        if uis:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            local target = getBestTarget()
+            if target then
+                local cam = workspace.CurrentCamera
+                cam.CFrame = CFrame.lookAt(cam.CFrame.Position, target.Position)
+            end
+        end
+    end
+end)
+
+print("✅ Full Script Loaded!")
+print("• N = Toggle Noclip")
+print("• ESP now stays after death/respawn")
+print("• X = Invisibility | F = Fly | Q = Aimbot")local function getVehicleRoot()
     local char = player.Character
     if not char then return nil end
     local hum = char:FindFirstChild("Humanoid")
