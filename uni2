@@ -403,4 +403,4 @@ game:GetService("RunService").RenderStepped:Connect(function()
 end)
 
 print("✅ Full Script Loaded - Balanced ESP Respawn")
-print("• ESP appears ~0.6 seconds after respawn (fast but stable)")
+print("• ESP appears ~0.6 seconds after respawn (fast but stable)"
