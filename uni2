@@ -11,7 +11,7 @@ local invisEnabled = false
 local flySpeed = 50
 local walkSpeed = 50
 
--- GUI
+-- ==================== GUI ====================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AdvancedHub"
 screenGui.ResetOnSpawn = false
@@ -29,7 +29,7 @@ frame.Parent = screenGui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-title.Text = "Thomas UNI V4"
+title.Text = "Thomas UNI V5"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
@@ -307,7 +307,7 @@ local function toggleHealth(state)
     end
 end
 
--- ==================== AIMBOT WITH TEAM CHECK ====================
+-- ==================== AIMBOT WITH FIXED TEAM CHECK ====================
 local function isVisible(targetHead)
     local camera = workspace.CurrentCamera
     local myHead = player.Character and player.Character:FindFirstChild("Head")
@@ -326,6 +326,11 @@ local function getBestTarget()
 
     for _, p in pairs(game.Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
+            -- FIXED TEAM CHECK
+            if p.Team == player.Team and player.Team ~= nil then
+                continue -- Skip teammates
+            end
+
             local head = p.Character.Head
             if isVisible(head) then
                 local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
@@ -343,37 +348,28 @@ local function getBestTarget()
     return bestTarget
 end
 
--- ==================== FAST ESP RESPAWN (0.1s) ====================
-game.Players.PlayerAdded:Connect(function(plr)
-    if plr == player then return end
-    plr.CharacterAdded:Connect(function(char)
-        task.wait(0.1)
-        if espEnabled then
-            createESP(char)
-        end
-    end)
-end)
-
-for _, plr in pairs(game.Players:GetPlayers()) do
-    if plr ~= player then
-        plr.CharacterAdded:Connect(function(char)
-            task.wait(0.1)
-            if espEnabled then
-                createESP(char)
-            end
-        end)
-        if plr.Character then
-            createESP(plr.Character)
-        end
+-- ==================== RESPAWN ESP (0.1s) ====================
+local function onCharacterAdded(char)
+    task.wait(0.1)
+    if espEnabled and char:FindFirstChild("Head") then
+        createESP(char)
     end
 end
 
-player.CharacterAdded:Connect(function(char)
-    task.wait(0.1)
-    if espEnabled then
-        createESP(char)
+for _, plr in pairs(game.Players:GetPlayers()) do
+    if plr ~= player then
+        if plr.Character then createESP(plr.Character) end
+        plr.CharacterAdded:Connect(onCharacterAdded)
+    end
+end
+
+game.Players.PlayerAdded:Connect(function(plr)
+    if plr ~= player then
+        plr.CharacterAdded:Connect(onCharacterAdded)
     end
 end)
+
+player.CharacterAdded:Connect(onCharacterAdded)
 
 -- ==================== CONNECTIONS ====================
 updateFlyBtn.MouseButton1Click:Connect(function()
@@ -452,5 +448,5 @@ game:GetService("RunService").RenderStepped:Connect(function()
 end)
 
 print("✅ FULL SCRIPT LOADED")
-print("• ESP now detects respawns almost instantly (0.1s)")
+print("• Team Check fixed on Aimbot")
 print("• E = Toggle ESP | F = Fly | X = Invis | N = Noclip | Q = Aimbot")
