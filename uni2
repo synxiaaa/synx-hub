@@ -394,4 +394,4 @@ game:GetService("RunService").RenderStepped:Connect(function()
 end)
 
 print("✅ FULL SCRIPT LOADED - Improved Keybind System")
-print("• Click the small box next to Fly → Press any key to bind")
+print("• Click the small box next to Fly → Press any key to bind"
